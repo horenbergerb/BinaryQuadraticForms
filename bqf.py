@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 from matplotlib import animation
 from math import sqrt, sin, cos, acos
 
-STEPS = 50
+STEPS = 70
 PAUSE = 10
 
 def get_lattice(cur_bqf):
@@ -39,7 +39,7 @@ def slow_transform(R, cur_step, steps=STEPS):
     
     return Matrix([[a,b],[c,d]])
 
-def update(num, bqf, R, line1, line2, cur_phi, steps=STEPS):
+def update(num, bqf, R, line1, line2, line3, line4, cur_phi, cur_disc, steps=STEPS):
     if num <= steps:
         #deforming the bqf slightly
         cur_bqf = bqf(slow_transform(R, num, steps=STEPS))
@@ -48,14 +48,19 @@ def update(num, bqf, R, line1, line2, cur_phi, steps=STEPS):
 
         #print("Step {} out of {}".format(num+1, steps))
 
+        disc = cur_bqf.disc()
+        
         line1.set_data(x1,y1)
         line2.set_data(x2,y2)
+        line3.set_data([x1[1], x1[1]+x2[1]], [y1[1], y1[1]])
+        line4.set_data([x1[1]+x2[1], x2[1]],[y1[1], 0])
         cur_phi.set_text('Phi: {:.2f}'.format(phi))
+        cur_disc.set_text('$\sqrt{D}$:' + ' {:.2f}'.format(sqrt(-disc)))
 
     else:
         pass
 
-bqf = QuadraticForm(RR, 2, [1,2,5])
+bqf = QuadraticForm(RR, 2, [4,2,1])
 
 bqf.compute_definiteness()
 if not bqf.is_positive_definite():
@@ -69,16 +74,19 @@ G, R = bqf.reduced_binary_form1()
 fig = plt.figure()
 ax = fig.add_subplot(111)
 ax.set_title("Reduction of the BQF {:.2f}x^2 + {:.2f}xy + {:.2f}y^2".format(float(bqf.coefficients()[0]),float(bqf.coefficients()[1]),float(bqf.coefficients()[2])))
-plt.xlim([-.1,max(bqf.coefficients())])
-plt.ylim([-.1,max(bqf.coefficients())])
+plt.xlim([-sqrt(max(bqf.coefficients()))-1,sqrt(max(bqf.coefficients()))+1])
+plt.ylim([-sqrt(max(bqf.coefficients()))-1,sqrt(max(bqf.coefficients()))+1])
 
 x1, y1, x2, y2, phi = get_lattice(bqf)
 
 line1, = ax.plot(x1,y1, color='b')
 line2, = ax.plot(x2,y2, color='b')
-cur_phi = ax.text(max(bqf.coefficients())-1., max(bqf.coefficients())-1., 'Phi: {:.2f}'.format(phi), fontsize=15)
+line3, = ax.plot([x1[1], x1[1]+x2[1]], [y1[1], y1[1]], color='b')
+line4, = ax.plot([x1[1]+x2[1], x2[1]],[y1[1], 0], color='b')
+cur_phi = ax.text(sqrt(max(bqf.coefficients()))-1., -sqrt(max(bqf.coefficients()))+1., 'Phi: {:.2f}'.format(phi), fontsize=15)
+cur_disc = ax.text(sqrt(max(bqf.coefficients()))-1., -sqrt(max(bqf.coefficients()))+1.5, '$\sqrt{D}$' + ': {:.2f}'.format(sqrt(-disc)), fontsize=15)
 
-ani = animation.FuncAnimation(fig, update, STEPS+PAUSE, fargs=(bqf, R, line1, line2, cur_phi,), blit=False)
+ani = animation.FuncAnimation(fig, update, STEPS+PAUSE, fargs=(bqf, R, line1, line2, line3, line4, cur_phi, cur_disc,), blit=False)
 ani.save('reducing_bqf.gif', writer='imagemagick')
 
 print("Original BQF:")
